@@ -38,6 +38,6 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
-# personal space to f*ck up calmly
+# personal space 
 /_personal/
-
+/_src/*
