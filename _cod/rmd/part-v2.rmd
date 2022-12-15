@@ -1,0 +1,179 @@
+---
+title: "Linear Models"
+author: "A. Valdes Zuñiga"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(gridExtra)
+library(multcomp)
+library(car)
+library(ggplot2)
+
+fol_main <- '/Users/aronvz/Documents/github/kul-lm-as01/'
+fol_src  <- '_src/'
+fol_out  <- '_out/'
+fil_raw  <- 'salary.gender.txt'
+
+setwd(fol_main)
+
+salary.gender.txt <- read.table(paste0(fol_src,fil_raw), 
+                                header=TRUE, 
+                                skip = 27,
+                                quote="\"", sep=",")
+
+summary(salary.gender.txt)
+#Salary-Gender-Education 
+
+salary.gender.txt01 <- 
+  transform(salary.gender.txt,
+            f.gender = as.factor(Gender), 
+            f.education = as.factor(Education))
+
+summary(salary.gender.txt01)
+#Salary-Gender-Education __ f.gender-f.education
+
+levels(salary.gender.txt01$f.gender)
+levels(salary.gender.txt01$f.education)
+
+
+
+
+```
+
+## R Markdown
+
+This is an R Markdown document. 
+
+```{r cars}
+###########################
+#Exploratory Data Analysis
+
+# Distribution of response variable - Salary
+p_ht1 <- ggplot(salary.gender.txt01, aes(Salary)) + 
+  geom_histogram(colour = 'black', fill = 'blue', bins=30) + 
+  ggtitle('Distribution of Response variable') + 
+  xlab('Response variable - Salary') + 
+  theme_bw()
+
+# Distribution of explanatory variable - f.gender
+p_br1 <- ggplot(salary.gender.txt01, aes(f.gender, fill = f.gender)) + 
+  geom_bar() + 
+  ggtitle('Distribution of Gender') + 
+  xlab('Explanatory variable - Gender') + 
+  theme_bw()
+
+# Distribution of explanatory variable - f.education
+p_br2 <- ggplot(salary.gender.txt01, aes(f.education, fill = f.education)) + 
+  geom_bar() + 
+  ggtitle('Distribution of Education') + 
+  xlab('Explanatory variable - Education') + 
+  theme_bw()
+#png("0-distr.png")
+grid.arrange(p_br1, p_br2,p_ht1, ncol = 3)
+print(grid.arrange(p_br1, p_br2,p_ht1, ncol = 3))
+#dev.off()
+######################################################
+
+
+###########################
+# Mean of response variable 
+###########################
+table_unbal_mean <- with(salary.gender.txt01, 
+                         tapply(Salary, list(f.gender, f.education), 
+                                mean))
+table_unbal_mean %>% round(2) %>% as.table()
+
+# Frequency table of response variable by workload and salary
+table_unbal_freq <- with(salary.gender.txt01, 
+                         table(f.gender, f.education))
+table_unbal_freq
+
+# Data in long format
+data_longer <- table_unbal_mean %>% as.data.frame()
+data_longer$`f.gender` <- row.names(data_longer)
+data_longer <- data_longer %>% 
+  pivot_longer(cols = c(Degree, `No degree`),
+               names_to = 'degree',
+               values_to = 'mean_y')
+######################################################
+
+#with(salary.gender.txt01, interaction.plot(
+#  x.factor = Education, 
+#  trace.factor = Gender, 
+#  response = Salary,
+#  fun = mean, type = "b", legend = T,ylab = "Mean Salary",
+#                                main="Interaction plot", pch=c(1,19)))
+
+# Interaction plot
+int1 <- ggplot(data_longer, aes(degree, mean_y)) + 
+  geom_line(aes(group = f.gender, color = f.gender), size = 1) + 
+  xlab('Gender') + 
+  ylab('Mean value of Salary') + 
+  ggtitle('Interaction Plot - Salary - Education') + theme_bw() + 
+  theme(axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 13),
+        axis.text.x = element_text(size = 13),
+        axis.title.x = element_text(size = 13))
+
+int2 <- ggplot(data_longer, aes(f.gender, mean_y)) + 
+  geom_line(aes(group = degree, color = degree), size = 1) + 
+  xlab('Salary') + 
+  ylab('Mean value of Salary') + 
+  ggtitle('Interaction Plot - Salary - Gender') + theme_bw() +   
+  theme(axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 13),
+        axis.text.x = element_text(size = 13),
+        axis.title.x = element_text(size = 13))
+
+grid.arrange(int1, int2, ncol = 2)
+######################################################
+
+
+salary.gender.txt01$EdDe <- interaction(
+  salary.gender.txt01$Gender,
+  salary.gender.txt01$Education)
+
+salary.gender.txt01$EdDe <- ifelse(
+  salary.gender.txt01$EdDe=='Male.No degree','M.NoD',
+    ifelse(salary.gender.txt01$EdDe=='Male.Degree','M.Deg', 
+           ifelse(salary.gender.txt01$EdDe=='Female.No degree','F.NoD','F.Deg'))
+) 
+
+bxp1 <- ggplot(salary.gender.txt01, aes(f.gender, y = Salary)) + 
+geom_boxplot(outlier.colour="black", outlier.shape=16,
+             outlier.size=2, notch=FALSE)
+
+bxp2 <- ggplot(salary.gender.txt01, aes(f.education, y = Salary)) + 
+  geom_boxplot(outlier.colour="black", outlier.shape=16,
+               outlier.size=2, notch=FALSE) + 
+  theme(axis.text.y=element_blank(),
+    axis.title.y.left = element_blank(),
+    axis.ticks.y=element_blank())
+
+bxp3 <- ggplot(salary.gender.txt01, aes(EdDe, y = Salary)) + 
+  geom_boxplot(outlier.colour="black", outlier.shape=16,
+               outlier.size=2, notch=FALSE) + 
+  theme(axis.text.y=element_blank(),
+    axis.title.y.left = element_blank(),
+    axis.ticks.y=element_blank())
+
+grid.arrange(bxp1, bxp2, bxp3, ncol = 3)
+
+#boxplot(Salary~Gender, col=0, data = salary.gender.txt01)
+#boxplot(Salary~Education, col=0, data=salary.gender.txt01)
+#boxplot(Salary~Gender*Education, col=0, data=salary.gender.txt01, 
+#        main="Boxplots of Salaries Data")
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+
