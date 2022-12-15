@@ -5,6 +5,27 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
+## Salary gender discrimination
+A group of researchers were interested in whether or not there is gender discrimination with respect to employee salaries at a particular firm. To that end a random sample of 132 employees was studied. The researchers collected information on gender, salary and educational level. The final data set Contained the following variables
+
+Gender: A binary variable taking values Female and Male
+Salary: Salary perceived in thousands of dollars per year
+Education: A binary variable taking values Degree and No degree
+
+#### Asigment 1: 
+Refer to the Salary gender discrimination data set. Assume that the sample sizes do not reflect  the importance of the treatment means. Carry out an unbalanced two-way analysis of variance of this data set,  where the response of interest is Salary and the two crossed factors Gender and Education.
+
+#### Asigment 2: 
+Refer to the Salary gender discrimination data set. Assume that the sample sizes reflect the importance of the treatment means. Carry out an unbalanced two-way analysis of variance of this data set, where the response of interest is Salary and the two crossed factors Gender and Education.
+
+Compare the results of both analyses and explain their similarities and differences in a formal and intuitive way.
+Discuss the appropriateness of the model.
+
+### Note: 
+Students are encouraged to look for alternative analysis and  techniques in the literature if models studied in the course are not appropriate to answer the scientific questions. The idea is to mimic the real work of a consulting statistician in the academia or the industry. 
+
+
+
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(gridExtra)
@@ -173,7 +194,7 @@ grid.arrange(bxp1, bxp2, bxp3, ncol = 3)
 You can also embed plots, for example:
 
 ```{r pressure, echo=FALSE}
-plot(pressure)
+#plot(pressure)
 ```
 
 
