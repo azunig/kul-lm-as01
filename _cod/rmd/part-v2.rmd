@@ -1,6 +1,12 @@
 ---
 title: "Linear Models"
-author: "A. Valdes Zuñiga"
+author:
+  - "Ma Tingting"
+  - "Trepça Frida"
+  - "Unni Narayanan Adhithya"
+  - "Valdés Aharon"
+  - "Sander Schoepen"
+  
 date: "`r Sys.Date()`"
 output: html_document
 ---
@@ -24,15 +30,15 @@ Discuss the appropriateness of the model.
 ### Note: 
 Students are encouraged to look for alternative analysis and  techniques in the literature if models studied in the course are not appropriate to answer the scientific questions. The idea is to mimic the real work of a consulting statistician in the academia or the industry. 
 
-
-
-```{r setup, include=FALSE}
+```{r setup, echo=FALSE}
 library(tidyverse)
 library(gridExtra)
 library(multcomp)
 library(car)
 library(ggplot2)
-
+library(MASS)
+library(lmtest)
+library(DescTools)
 fol_main <- '/Users/aronvz/Documents/github/kul-lm-as01/'
 fol_src  <- '_src/'
 fol_out  <- '_out/'
@@ -59,16 +65,11 @@ summary(salary.gender.txt01)
 levels(salary.gender.txt01$f.gender)
 levels(salary.gender.txt01$f.education)
 
-
-
-
 ```
 
-## R Markdown
+## Checking DataSet
 
-This is an R Markdown document. 
-
-```{r cars}
+```{r pdescr}
 ###########################
 #Exploratory Data Analysis
 
@@ -94,7 +95,7 @@ p_br2 <- ggplot(salary.gender.txt01, aes(f.education, fill = f.education)) +
   theme_bw()
 #png("0-distr.png")
 grid.arrange(p_br1, p_br2,p_ht1, ncol = 3)
-print(grid.arrange(p_br1, p_br2,p_ht1, ncol = 3))
+#print(grid.arrange(p_br1, p_br2,p_ht1, ncol = 3))
 #dev.off()
 ######################################################
 
@@ -189,12 +190,183 @@ grid.arrange(bxp1, bxp2, bxp3, ncol = 3)
 #        main="Boxplots of Salaries Data")
 ```
 
-## Including Plots
+## Fit Anova
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-#plot(pressure)
+```{r panova}
+salaries.fit<-aov(Salary~Gender*Education,data=salary.gender.txt01)
+salaries.fit.summary<-summary(salaries.fit)
+salaries.fit.summary
 ```
+
+The only significant relation is __education__. 
+
+No evidence for an interaction effect.
+
+***** 
+
+comparison using Tukey procedure
+
+```{r ptukey}
+salaries.fit.tukey<-TukeyHSD(salaries.fit,which=c("Gender:Education"),conf.level = .95)
+plot(salaries.fit.tukey)
+salaries.fit.tukey
+```
+
+Fit a two-way anova model without interaction effects
+
+```{r twowayanovanointer}
+salaries.fit_2<-aov(Salary~Gender+Education,data=salary.gender.txt01)
+salaries.fit_2.summary<-summary(salaries.fit_2)
+salaries.fit_2.summary
+```
+### Type I SS
+
+```{r typeIss}
+
+type1.unbalanced1<-aov(Salary~Gender*Education,data = salary.gender.txt01)
+type1.unbalanced1.summary<-summary(type1.unbalanced1)
+type1.unbalanced1.summary #only Education failed null-hypothesis
+
+type1.unbalanced2<-aov(Salary~Education*Gender,data = salary.gender.txt01)
+type1.unbalanced2.summary<-summary(type1.unbalanced2)
+type1.unbalanced2.summary #both Education and Gender failed null-hypothesis
+```
+### Type II SS
+```{r typeIIss}
+type2.unbalanced<-Anova(lm(Salary~Gender*Education,data = salary.gender.txt01,
+                           contrasts=list(Gender="contr.sum", Education="contr.sum")), type="II")
+type2.unbalanced #both Education and Gender failed null-hypothesis
+```
+
+### Type III SS 
+```{r typeIIIss}
+
+type3.unbalanced<-Anova(lm(Salary~Gender*Education,data = salary.gender.txt01,contrasts=list(Gender="contr.sum", Education="contr.sum")), type="III")
+type3.unbalanced #both Education and Gender failed null-hypothesis
+```
+### Decision 
+Type I, II or III decision 
+  * Type III will be used
+  * No significant interaction between Gender and Education.
+
+### Factor Effect Model
+
+```{r definingXmatrix}
+data <- salary.gender.txt01
+data$Gender <- as.factor(data$Gender)
+data$Education <- as.factor(data$Education)
+summary(data)
+contrasts(data$Gender) = contr.sum
+contrasts(data$Education) = contr.sum
+model.matrix(~Gender*Education, data)
+
+```
+### Creating the indicator variables
+```{r indicatorvariables}
+data1 <- as.data.frame(model.matrix(~ Gender*Education, data, contrasts = list(Gender="contr.sum",Education="contr.sum"))[,2:4]) 
+data1$Salary <-data$Salary
+data1
+
+data.full=lm(Salary ~ Gender1+ Education1 +Gender1:Education1, data = data1)
+summary(data.full)
+
+data.reduced=lm(Salary ~ Gender1+ Education1, data = data1)
+summary(data.reduced)
+```
+
+
+### Test for the interaction
+```{r testinteraction}
+anova(data.reduced, data.full) #no interaction
+```
+
+### analysis of residuals 
+```{r analysisofresiduals }
+salary.fit <- aov(Salary~Education, data = salary.gender.txt01)
+summary(salary.fit) # null-hypothesis rejected
+
+plot(salary.fit)
+#plot(res,fitted(salary.fit),
+#     xlab="Fitted values",
+#     ylab="Studentized residuals",
+#     main="Residuals vs fitted values plot")
+#abline(h=0,lty="dashed")
+
+plot(salary.gender.txt01$Salary ,rstandard(salary.fit), xlab="Observed values",
+     ylab="Studentized residuals",
+     main="Residuals vs factor levels plot",axes=F)
+axis(side=1)
+
+axis(side=2)
+abline(h=0,lty="dashed")
+
+res<-salary.fit$residuals
+plot(fitted(salary.fit),res)
+abline(0,0)
+```
+### Studentized residuals
+
+```{r studentizedresiduals }
+salary.gender.txt01$rs<-rstandard(salary.fit)
+salary.gender.txt01$fit<-fitted.values(salary.fit)
+salary.gender.txt01$resi<-salary.fit$residuals
+#salary$Education<-as.factor(salary.gender.txt01$Education)
+leveneTest(Salary~Education, data=salary.gender.txt01) 
+```
+has heterosceracicity
+
+### Test for independence
+```{r testforindependence }
+durbinWatsonTest(salary.fit,alternative="two.sided", 
+                 data=salary.gender.txt01) #independent
+```
+
+### Normality
+
+```{r normality }
+qqnorm(residuals(salary.fit))
+qqline(residuals(salary.fit)) #does not look normal
+shapiro.test(residuals(salary.fit)) # Passed normality test
+ks.test(residuals(salary.fit),"pnorm", alternative="two.sided") 
+```
+
+#### Failed normality test
+```{r normality2 }
+ggplot(salary.gender.txt01, aes(sample=resi))+stat_qq()+stat_qq_line(color = "red")
+#ggsave("QQLogPlot.png", path = output_path, dpi = 72,width = 12, height = 12)
+ggplot(data = salary.gender.txt01, aes(y = resi, x = Salary)) + 
+  geom_point(col = 'blue') + 
+  geom_abline(slope = 0)
+```
+
+### multiple comparasion
+```{r multipleComparasion }
+TukInit <- TukeyHSD(salary.fit)
+plot(TukInit)
+scheffe <- ScheffeTest(salary.fit)
+plot(scheffe)
+all_pairwise = rbind("Degree-No Degree" = c(-1, 1))
+```
+
+
+### find the best transformation based on boxcox procedure
+
+```{r boxcoxprocedure }
+
+data.boxcox<-boxcox(salary.fit, lambda=seq(-2, 4,by=.1))
+lambda.max<-max(data.boxcox$y)
+boxcox.lambda <- data.boxcox$x[data.boxcox$y==lambda.max]
+boxcox.lambda
+salary.gender.txt01$boxcox<-salary.gender.txt01$Salary*boxcox.lambda
+socialbox.fit <-aov(boxcox~f.education*f.gender, data = salary.gender.txt01)
+summary(socialbox.fit)
+leveneTest(boxcox~Education, data=salary.gender.txt01)
+bptest(salary.fit)
+plot(fitted(salary.fit),resid(salary.fit))
+```
+
+
+
+
 
 
