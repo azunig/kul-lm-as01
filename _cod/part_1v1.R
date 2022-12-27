@@ -168,3 +168,111 @@ summary(result.balance)
 # Gender is not significant.
 # When the model is changed (type III) there is information not considered. The size of the sample perhaps indicates that there are few women. Perhaps a larger sample or more representative samples of both genders are needed for all levels
 # educational. Not everything is represented.
+
+############################
+# Fit the two-way anova model
+salaries.fit<-aov(Salary~Gender*Education,data=salaries)
+salaries.fit.summary<-summary(salaries.fit)
+salaries.fit.summary
+# the only significant relation is education. 
+#there is no evidence for an interaction effect
+#to pool or not to pool: see slide 329 for some decision rules: 
+# 1) MSAB/MSE<2 fo a=0.05 and but degrees of freedom for SSE are larger than 5
+
+
+#perform a multiple comparison using Tukey procedure
+
+salaries.fit.tukey<-TukeyHSD(salaries.fit,which=c("Gender:Education"),conf.level = .95)
+plot(salaries.fit.tukey)
+salaries.fit.tukey
+
+#all the combinations were significant at the 5% significance level, with the biggest diffenence between female: nog degree and male: degree
+
+#now fit a two-way anova model without interatction effects
+salaries.fit_2<-aov(Salary~Gender+Education,data=salaries)
+salaries.fit_2.summary<-summary(salaries.fit_2)
+salaries.fit_2.summary
+
+#check if study is balanced....
+
+gender_group<-group_by(salaries,Gender)  
+education_group<-group_by(salaries, Education)
+
+summarise(gender_group, n_gender=n())
+summarise(education_group,n_education=n())
+
+#the education varaible is balanced, but the Gender varaible is not=> use studentised rather than semistudetised residuals
+
+#look at the studentised and deleted residuals (different notation in R)
+
+residuals<-data.frame("studentised res."=rstandard(salaries.fit_2), "deleted res."=rstudent(salaries.fit_2)) 
+residuals
+
+#Homoskedasticity
+
+#Residuals-fitted values plot
+plot(fitted.values(salaries.fit_2),rstandard(salaries.fit_2),
+     xlab = "Fitted values", 
+     ylab = "Studentized residuals",
+     main = "Residuals vs fitted values")
+abline(h=0,lty=1)
+
+#Brown-Forsythe test: testing homoskedasticity for unbalanced study
+
+leveneTest(Salary~Gender*Education,data=salaries)
+#p-value: 0.4839=> no evidence to question homoskedasticity
+
+#Independence of errors
+
+#plot residuals against themselves with one lag
+plot(rstandard(salaries.fit_2)[-c(1)],rstandard(salaries.fit_2)[-c(dim(salaries)[1])])
+abline
+#not sure if this is correct: check slide 161
+#residuals seem to be independent
+
+#Durbin-Watson test for independence of errors
+
+#with interaction
+durbinWatsonTest(salaries.fit, alternative="two.sided", data=salaries)
+#p-value 0.084 => independence hypothesis cannot be rejected, but close to 0.05 significance level!
+
+#without interaction
+durbinWatsonTest(salaries.fit_2, alternative="two.sided", data=salaries)
+#p-value=0.06 => independence hypothesis almost rejected
+
+# Outliers
+
+#I copied this code from the lecture but not entirely sure what is being calculated. 
+#It is definitely performing a t-test, but not sure about the details
+pvalue_outliers = NULL
+r.al=4
+nT.al<-dim(salaries)[1]
+for(i in 1:nT.al)
+  pvalue_outliers[i]=1-pt(abs(rstudent(salaries.fit_2)[i]),
+                          + nT.al-r.al-1)
+
+pvalue_outliers[pvalue_outliers>(0.05/(nT.al))]=1 #we may need to do a bonferroni correction here!
+Stud.Deleted.Res=rstudent(salaries.fit_2)
+Outlier.p.value=pvalue_outliers
+out.salaries<-data.frame(Stud.Deleted.Res,
+                         + Outlier.p.value)
+out.salaries
+
+#Normality
+
+#qqplot=>do not use row residuals!!
+qqnorm(residuals(salaries.fit_2))
+qqline(residuals(salaries.fit_2))    
+
+#Shapiro-test
+shapiro.test(residuals(salaries.fit_2))
+#p-value high very high
+
+#Kolmogorov-Smirnov test
+ks.test(residuals(salaries.fit_2),"pnorm", alternative="two.sided")
+#normality rejected, but ties in data!
+
+
+
+
+
