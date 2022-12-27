@@ -171,7 +171,7 @@ summary(result.balance)
 
 ############################
 # Fit the two-way anova model
-salaries.fit<-aov(Salary~Gender*Education,data=salaries)
+salaries.fit<-aov(Salary~Gender*Education,data=salary.gender.txt01)
 salaries.fit.summary<-summary(salaries.fit)
 salaries.fit.summary
 # the only significant relation is education. 
@@ -188,10 +188,19 @@ salaries.fit.tukey
 
 #all the combinations were significant at the 5% significance level, with the biggest diffenence between female: nog degree and male: degree
 
-#now fit a two-way anova model without interatction effects
-salaries.fit_2<-aov(Salary~Gender+Education,data=salaries)
+#now fit a two-way anova model without interaction effects
+salaries.fit_2<-aov(Salary~Gender+Education,data=salary.gender.txt01)
 salaries.fit_2.summary<-summary(salaries.fit_2)
 salaries.fit_2.summary
+
+
+salaries.fit.type2<-Anova(lm(Salary~Gender*Education,
+  contrasts=list(Gender='contr.sum', Education='contr.sum'),
+  data = salary.gender.txt01), type='II')
+
+salaries.fit.type2
+
+
 
 #check if study is balanced....
 
