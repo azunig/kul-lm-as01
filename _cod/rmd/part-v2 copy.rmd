@@ -39,7 +39,6 @@ library(ggplot2)
 library(MASS)
 library(lmtest)
 library(DescTools)
-library(stats)
 fol_main <- '/Users/aronvz/Documents/github/kul-lm-as01/'
 fol_src  <- '_src/'
 fol_out  <- '_out/'
@@ -69,9 +68,8 @@ levels(salary.gender.txt01$f.education)
 ```
 
 # 2 Checking DataSet
-Collecting and organizing data
+### 2.1 Collecting and organizing data
 Collect data from each group and organize it into a suitable format for analysis. Make sure to record the sample size for each group.
-### 2.1 Descriptive
 ```{r pdescr-1, fig.width = 13}
 #Exploratory Data Analysis
 
@@ -126,9 +124,11 @@ data_longer <- data_longer %>%
 data_longer
 
 ```
-### 2.3.1 Interaction 
+### 2.3 Interaction 
 
 ```{r pdescr-3, fig.width = 13}
+######################################################
+
 #with(salary.gender.txt01, interaction.plot(
 #  x.factor = Education, 
 #  trace.factor = Gender, 
@@ -160,7 +160,7 @@ int2 <- ggplot(data_longer, aes(f.gender, mean_y)) +
 grid.arrange(int1, int2, ncol = 2)
 ```
 
-### 2.3.2 Interaction BoxPlot
+### 2.3 Interaction BoxPlot
 
 
 ```{r pdescr-4, fig.width = 13}
@@ -205,36 +205,20 @@ grid.arrange(bxp1, bxp2, bxp3, ncol = 3)
 #        main="Boxplots of Salaries Data")
 ```
 
-# 3 Assumptions
+## 3 Assumptions
 Check the assumptions: Two-way ANOVA assumes that the data are normally distributed and homoscedastic (i.e., the variances of the groups are equal). Use statistical tests or plots to check whether these assumptions are met.
 
-### Normally Distributed
-
 ```{r passum-1, fig.width = 13}
-salaries.fit<-aov(Salary~Gender*Education,data=salary.gender.txt01)
-salaries.fit.summary<-summary(salaries.fit)
-salaries.fit.summary
-
-
- ## Normality by Shapiro-Wilk
-shapiro.test(residuals(salaries.fit))
-#residuals(salaries.fit)
-ks.test(residuals(salaries.fit),"pnorm", alternative="two.sided")
-plot(salaries.fit)
-```
-
-
-### Homoscedastic
-```{r passum-2, fig.width = 13}
 
 ```
+
 
 ## Fit Anova
 
 ```{r panova}
-#salaries.fit<-aov(Salary~Gender*Education,data=salary.gender.txt01)
-#salaries.fit.summary<-summary(salaries.fit)
-#salaries.fit.summary
+salaries.fit<-aov(Salary~Gender*Education,data=salary.gender.txt01)
+salaries.fit.summary<-summary(salaries.fit)
+salaries.fit.summary
 ```
 
 The only significant relation is __education__. 
@@ -302,12 +286,11 @@ model.matrix(~Gender*Education, data)
 ```
 ### Creating the indicator variables
 ```{r indicatorvariables}
-data1 <- as.data.frame(model.matrix(~ Gender*Education, data, contrasts =
-                                      list(Gender="contr.sum",Education="contr.sum"))[,2:4]) 
+data1 <- as.data.frame(model.matrix(~ Gender*Education, data, contrasts = list(Gender="contr.sum",Education="contr.sum"))[,2:4]) 
 data1$Salary <-data$Salary
 data1
 
-data.full=lm(Salary ~ Gender1 + Education1 + Gender1:Education1, data = data1)
+data.full=lm(Salary ~ Gender1+ Education1 +Gender1:Education1, data = data1)
 summary(data.full)
 
 data.reduced=lm(Salary ~ Gender1+ Education1, data = data1)
@@ -320,38 +303,7 @@ summary(data.reduced)
 anova(data.reduced, data.full) #no interaction
 ```
 
-
-
-
-
-
 ### analysis of residuals 
-
-```{r analysisofresiduals00 }
-salary.fit <- aov(Salary~Gender+Education, data = salary.gender.txt01)
-summary(salary.fit) # null-hypothesis rejected
-
-plot(salary.fit)
-#plot(res,fitted(salary.fit),
-#     xlab="Fitted values",
-#     ylab="Studentized residuals",
-#     main="Residuals vs fitted values plot")
-#abline(h=0,lty="dashed")
-
-plot(salary.gender.txt01$Salary ,rstandard(salary.fit), xlab="Observed values",
-     ylab="Studentized residuals",
-     main="Residuals vs factor levels plot",axes=F)
-axis(side=1)
-
-axis(side=2)
-abline(h=0,lty="dashed")
-
-res<-salary.fit$residuals
-plot(fitted(salary.fit),res)
-abline(0,0)
-```
-
-
 ```{r analysisofresiduals }
 salary.fit <- aov(Salary~Education, data = salary.gender.txt01)
 summary(salary.fit) # null-hypothesis rejected
@@ -437,23 +389,7 @@ plot(fitted(salary.fit),resid(salary.fit))
 ```
 
 
-1. Define the research question and hypothesis: The research question should specify the two independent variables and the dependent variable, and the hypothesis should state the expected relationship between the variables.
 
-2. Collect and organize the data: Collect data from each group and organize it into a suitable format for analysis. Make sure to record the sample size for each group.
-
-3. Check the assumptions: Two-way ANOVA assumes that the data are normally distributed and homoscedastic (i.e., the variances of the groups are equal). Use statistical tests or plots to check whether these assumptions are met.
-
-4. Calculate the sum of squares (SS): The sum of squares is a measure of the total variance in the data. It is calculated by dividing the variance within each group by the sample size of that group, and then summing the resulting values for all groups.
-
-5- Calculate the degrees of freedom (df): The degrees of freedom is a measure of the number of independent observations in the data. It is calculated by subtracting the number of groups from the total sample size.
-
-6. Calculate the mean squares (MS): The mean squares is the average variance within each group. It is calculated by dividing the sum of squares by the degrees of freedom.
-
-7. Calculate the F-statistic: The F-statistic is a measure of the difference between the group means. It is calculated by dividing the mean squares between groups by the mean squares within groups.
-
-8. Determine the p-value: The p-value is the probability that the observed differences between the group means occurred by chance. It is calculated by comparing the F-statistic to a critical value from the F-distribution.
-
-9- Interpret the results: If the p-value is less than the chosen alpha level (typically 0.05), then the null hypothesis can be rejected and it can be concluded that there is a significant difference between the group means. If the p-value is greater than the alpha level, then the null hypothesis cannot be rejected and it can be concluded that there is no significant difference between the group means.
 
 
 
